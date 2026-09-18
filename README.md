@@ -6,6 +6,14 @@ Limit how many items a player can equip in each D&D 5e equipment category. The G
 
 Targets Foundry v13/v14 and D&D 5e 5.3.3 or newer. Requires **libWrapper**, available from Foundry's module browser. This is an initial local build; compatibility has been checked against documented APIs and the 5.3.3 source, but has not yet been verified in a running Foundry world. Newer 5e versions still need a smoke test.
 
+For installation through Foundry's **Add-on Modules > Install Module > Manifest URL**, use the following URL once the repository and release are publicly available:
+
+```text
+https://raw.githubusercontent.com/ryanw341/The-Horses-Equipment-Limits/main/module.json
+```
+
+A private repository or draft release cannot be installed by Foundry through this URL. You can also install the ZIP manually:
+
 1. Close Foundry and extract the ZIP into `Data/modules/the-horses-equipment-limits/`. The `module.json` file must be directly inside that folder.
 2. Start Foundry and enable libWrapper and The Horse's Equipment Limits in your world.
 3. Open **Game Settings > Configure Settings > The Horse's Equipment Limits > Configure Equipment Limits**.
@@ -66,7 +74,7 @@ npm test
 npm run package
 ```
 
-The ZIP is written to `dist/the-horses-equipment-limits-0.2.0.zip`, with `module.json` at its root. Source is hosted in the private [GitHub repository](https://github.com/ryanw341/The-Horses-Equipment-Limits). No public Foundry manifest or release download URL is configured. CI checks pushes and pull requests and uploads the ZIP as a workflow artifact.
+The ZIP is written to `dist/the-horses-equipment-limits-0.2.0.zip`, with `module.json` at its root. Source is hosted in the [GitHub repository](https://github.com/ryanw341/The-Horses-Equipment-Limits). The manifest's download URL points to that ZIP on release `v0.2.0`; publish it there to enable URL installation. CI checks pushes and pull requests and uploads the ZIP as a workflow artifact.
 
 To preview the settings and messages without Foundry, run `python -m http.server 8765 --bind 127.0.0.1` from this folder and open `http://127.0.0.1:8765/tools/preview.html`. This uses an in-memory API mock and does not connect to a world. The preview is excluded from the module ZIP.
 
