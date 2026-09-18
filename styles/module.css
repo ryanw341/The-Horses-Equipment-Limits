@@ -1,0 +1,30 @@
+.hel-settings, .hel-report {
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 4px 10px 8px 4px;
+  line-height: 1.45;
+}
+.hel-settings fieldset { margin: 12px 0; padding: 12px; border: 1px solid var(--color-border-light-primary, #777); border-radius: 6px; }
+.hel-settings legend { font-weight: bold; }
+.hel-settings .hel-check { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+.hel-settings input[type="checkbox"] { flex: 0 0 auto; }
+.hel-settings .hel-limit { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 8px 0; }
+.hel-settings .hel-limit select { width: 180px; }
+.hel-settings input[type="number"] { width: 84px; }
+.hel-settings .hel-hint, .hel-settings small { opacity: .8; font-size: .9em; }
+.hel-settings small { display: block; padding-left: 28px; overflow-wrap: anywhere; }
+.hel-settings .hel-section-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.hel-settings .hel-section-heading h3 { margin: 0; }
+.hel-settings .hel-rescan { width: auto; flex: 0 0 auto; }
+.hel-settings table { width: 100%; }
+.hel-settings th, .hel-settings td { padding: 8px; text-align: left; }
+.hel-settings th:last-child, .hel-settings td:last-child { width: 150px; }
+.hel-settings td label { display: flex; align-items: center; gap: 6px; }
+.hel-settings .hel-weapons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.hel-settings summary { cursor: pointer; font-weight: bold; padding: 8px 0; }
+.hel-report section { border-top: 1px solid var(--color-border-light-primary, #777); padding-top: 12px; margin-top: 12px; }
+.hel-report h4 { margin: 12px 0 4px; }
+.hel-report ul { margin-top: 4px; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .hel-settings .hel-weapons { grid-template-columns: 1fr; gap: 0; }
+}

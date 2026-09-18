@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Equipment Limits - local UI preview</title>
+<link rel="stylesheet" href="../styles/module.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 30px; background: #202329; color: #ece8df; font: 15px system-ui, sans-serif; }
+  body > header { max-width: 720px; margin: 0 auto 20px; }
+  h1 { font-size: 22px; margin-bottom: 8px; }
+  .window { max-width: 720px; margin: auto; padding: 20px; background: #30353d; border: 1px solid #62666d; border-radius: 10px; }
+  .window > h2 { font-size: 20px; margin-top: 0; }
+  button, input, select { color: inherit; background: #24282e; border: 1px solid #74777c; border-radius: 4px; padding: 6px; font: inherit; }
+  button { cursor: pointer; }
+  button:hover { background: #414955; }
+  input[type=checkbox] { accent-color: #d3b476; }
+  footer { display: flex; gap: 12px; margin-top: 16px; }
+  footer button { flex: 1; padding: 10px; }
+  th { background: #252a31; }
+  tr:nth-child(even) { background: #353b44; }
+  #status { color: #e1c389; min-height: 24px; margin-top: 10px; }
+</style>
+<header>
+  <h1>Equipment Limits: local UI preview</h1>
+  <p>This uses a small Foundry API mock. Changes stay in this page and never affect a world.</p>
+  <button id="open">Open settings</button>
+  <button id="custom">Register a custom category</button>
+  <button id="report">Example player message</button>
+  <div id="status" role="status"></div>
+</header>
+<main></main>
+<script type="module">
+  import { defaultConfig, equipmentViolations } from '../scripts/rules.js';
+  import { registerSettings } from '../scripts/settings.js';
+  import { showReport } from '../scripts/messages.js';
+  let config = defaultConfig(), menu;
+  const status = text => document.querySelector('#status').textContent = text;
+  class PreviewDialog {
+    constructor(options) { this.options = options; }
+    render() {
+      const wrapper = document.createElement('section'); wrapper.className = 'window';
+      const title = document.createElement('h2'); title.textContent = this.options.window.title;
+      this.form = document.createElement('form'); this.form.innerHTML = this.options.content;
+      const footer = document.createElement('footer');
+      for (const option of this.options.buttons) {
+        const button = document.createElement('button'); button.type = 'button'; button.textContent = option.label;
+        button.addEventListener('click', async event => {
+          if (!this.form.reportValidity()) return;
+          try { await option.callback?.(event, button, this); wrapper.remove(); }
+          catch (error) { status(error.message); }
+        });
+        footer.append(button);
+      }
+      this.form.append(footer); wrapper.append(title, this.form);
+      document.querySelector('main').replaceChildren(wrapper); this.element = wrapper;
+      this._onRender({}, {}); return this;
+    }
+    _onRender() {}
+  }
+  globalThis.foundry = { applications: { api: { DialogV2: PreviewDialog } } };
+  globalThis.ui = { notifications: { info: status, warn: status } };
+  globalThis.CONFIG = { DND5E: {
+    equipmentTypes: { light: 'Light armor', medium: 'Medium armor', heavy: 'Heavy armor', shield: 'Shields',
+      clothing: 'Clothing', ring: 'Rings', rod: 'Rods', wand: 'Wands', wondrous: 'Wondrous items' },
+    weaponTypes: { simpleM: 'Simple melee', martialM: 'Martial melee', simpleR: 'Simple ranged', martialR: 'Martial ranged', natural: 'Natural', laser: 'Custom laser' },
+    weaponTypeMap: { simpleM: 'melee', martialM: 'melee', simpleR: 'ranged', martialR: 'ranged' }
+  } };
+  globalThis.game = {
+    user: { isGM: true }, items: [], actors: [], scenes: [], i18n: { localize: value => value },
+    settings: { get: () => config, register() {}, registerMenu(id, key, value) { menu = value.type; },
+      async set(id, key, value) { config = value; document.querySelector('#open').textContent = 'Reopen saved settings'; } }
+  };
+  registerSettings();
+  document.querySelector('#open').addEventListener('click', () => new menu().render());
+  document.querySelector('#custom').addEventListener('click', () => {
+    CONFIG.DND5E.equipmentTypes['custom.cloak'] = 'Custom cloaks'; status('Custom cloaks registered. Click Scan again to discover it.');
+  });
+  document.querySelector('#report').addEventListener('click', () => {
+    const rules = defaultConfig(); rules.equipment.ring = { enabled: true, limit: 2 };
+    const items = ['Ring of Protection', 'Ring of Warmth', 'Ring of Spell Storing'].map(name => ({ name, type: 'equipment', system: { type: { value: 'ring' }, equipped: true } }));
+    showReport({ name: 'Test character' }, equipmentViolations(items.slice(0, 2), items, rules), null, true,
+      { equipment: [{ key: 'ring', label: 'Rings' }] });
+  });
+  new menu().render();
+</script>
+</html>
