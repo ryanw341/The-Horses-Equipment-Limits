@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { defaultConfig } from '../scripts/rules.js';
 import { checkOperation, registerEnforcement } from '../scripts/enforcement.js';
-import { readForm, registerSettings } from '../scripts/settings.js';
+import { getConfig, readForm, registerSettings } from '../scripts/settings.js';
 import { categoryId } from '../scripts/carry.js';
 
 let config, reports, registered;
@@ -159,6 +159,7 @@ function formFixture() {
   const entries = {
     enabled: { checked: true }, mode: { value: 'warn' }, applyToGM: { checked: false },
     attunementReminder: { checked: true }, heavyCountsTwo: { checked: true }, twoHandedCountsTwo: { checked: false },
+    lightCountsHalf: { checked: true },
     'equipment-0-enabled': { checked: true }, 'equipment-0-limit': { value: '2' },
     'melee-enabled': { checked: true }, 'melee-limit': { value: '2' },
     'ranged-enabled': { checked: false }, 'ranged-limit': { value: '0' },
@@ -175,6 +176,9 @@ test('settings save independent options and custom category IDs without path exp
   assert.equal(result.weapons.ranged.limit, 0);
   assert.equal(result.heavyCountsTwo, true);
   assert.equal(result.twoHandedCountsTwo, false);
+  assert.equal(result.lightCountsHalf, true);
+  form.elements.namedItem('lightCountsHalf').checked = false;
+  assert.equal(readForm(form, { equipment: [{ key: 'ring', label: 'Rings' }], weapons: [] }, result).lightCountsHalf, false);
   assert.equal(result.attunementReminder, true);
   assert.equal(result.weaponTypes.laser, 'ranged');
 });
@@ -200,6 +204,10 @@ test('settings are world-scoped and the menu is GM-only', () => {
   assert.ok(dialog.options.content.includes('Melee weapons'));
   assert.ok(dialog.options.content.includes('Ranged weapons'));
   assert.ok(dialog.options.content.includes('Warn only'));
+  assert.ok(dialog.options.content.includes('Light weapons count as half a slot'));
+  delete config.lightCountsHalf;
+  assert.equal(getConfig().lightCountsHalf, false);
+  assert.equal(config.lightCountsHalf, undefined, 'Reading old settings does not mutate saved data');
 });
 
 test('saving limits shows the capacity report with the newly saved rules', async () => {
@@ -263,4 +271,21 @@ test('source UUID and compendium matching survive the enforcement snapshot', () 
   const magazine = item('mags'); magazine.system.quantity = 3;
   magazine._stats = { compendiumSource: 'Compendium.world.magazines.Item.magazine' };
   assert.equal(checkOperation([magazine], { parent: actor([]) }, player, true), false);
+});
+
+test('Light weapon equip batches and property changes enforce fractional totals', () => {
+  config.lightCountsHalf = true;
+  config.weapons.melee = { enabled: true, limit: 1 };
+  const weapons = ['first', 'second', 'third'].map(id => ({ id, name: id, type: 'weapon',
+    system: { equipped: true, type: { value: 'simpleM' }, properties: new Set(['lgt']) } }));
+  assert.equal(checkOperation(weapons.slice(0, 2), { parent: actor([]) }, player, true), undefined);
+  assert.equal(reports.length, 0);
+  assert.equal(checkOperation(weapons, { parent: actor([]) }, player, true), false);
+  assert.match(reports[0].content, /counts as 0\.5/);
+  const parent = actor(weapons.slice(0, 2));
+  const operation = { parent, updates: [{ _id: 'first', 'system.properties': [] }] };
+  assert.equal(checkOperation([], operation, player, false), false, 'Removing Light increases the total from 1 to 1.5');
+  config.mode = 'warn';
+  assert.equal(checkOperation([], operation, player, false), undefined);
+  assert.ok(weapons[0].system.properties.has('lgt'), 'Checks do not modify the source item');
 });

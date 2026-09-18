@@ -31,7 +31,9 @@ Melee and ranged weapons have separate limits. Weapon groups follow `CONFIG.DND5
 
 The **Heavy** and **Two-Handed** options independently make matching weapons cost two slots. A weapon with both properties costs two total, even when both options are on. The options apply to both melee and ranged groups. Versatile alone does not count as Two-Handed.
 
-Each equipped item entry counts once (or twice for a qualifying weapon), regardless of stack quantity. Split a stack into separate items if its copies should occupy separate equipment slots.
+The separate **Light weapons count as half a slot (0.5)** option makes weapons with the Light property cost 0.5 slots. It starts disabled and applies to both melee and ranged groups. Two Light weapons use one slot. If a custom weapon also qualifies for an enabled Heavy or Two-Handed rule, it costs two slots instead. Light armor is unaffected. Player warnings and GM reports show the fractional costs, totals, and excesses.
+
+Each equipped item entry uses its slot cost (normally one, or 0.5/two for a qualifying weapon) regardless of stack quantity. Split a stack into separate items if its copies should occupy separate equipment slots. Weapon slot weighting does not change the Ammo, Aid, or Implant carried-capacity totals.
 
 ## Ammo, aid, and implant carrying capacity
 
@@ -109,7 +111,7 @@ npm test
 npm run package
 ```
 
-The ZIP is written to `dist/the-horses-equipment-limits-0.3.0.zip`, with `module.json` at its root. Source is hosted in the [GitHub repository](https://github.com/ryanw341/The-Horses-Equipment-Limits). The manifest's download URL points to that ZIP on release `v0.3.0`. CI checks pushes and pull requests and uploads the ZIP as a workflow artifact.
+The ZIP is written to `dist/the-horses-equipment-limits-0.3.1.zip`, with `module.json` at its root. Source is hosted in the [GitHub repository](https://github.com/ryanw341/The-Horses-Equipment-Limits). The manifest's download URL points to that ZIP on release `v0.3.1`. CI checks pushes and pull requests and uploads the ZIP as a workflow artifact.
 
 To preview the settings and messages without Foundry, run `python -m http.server 8765 --bind 127.0.0.1` from this folder and open `http://127.0.0.1:8765/tools/preview.html`. This uses an in-memory API mock and does not connect to a world. The preview is excluded from the module ZIP.
 
@@ -143,3 +145,4 @@ Sources checked:
 13. Enable Aid with a potion UUID and Implants with your custom equipment category. With PROF 3, STR +2, and CON +1, verify limits of twelve and four. Change the formula controls and confirm the new limits in the GM report. Test STR -5 and PROF 2 to verify the ammo/aid minima of two/four.
 14. Select an Item folder containing a nested folder, save, and add a copied source item to an actor. Verify it matches. Change folder contents, save again, and verify the refreshed selection. Select an Item compendium and test a new import. Check both modern source metadata and legacy `flags.core.sourceId`.
 15. Test Remaining Uses by spending and refilling a pool, then One per item entry with stacked and zero-quantity items. Verify a partial stack's excess quantity in the GM report. Restart the world and verify all three sections and their selections persist.
+16. Enable Light half-slot counting and set melee to one slot. Equip two Light weapons successfully, then try a third. Verify the warning shows 1.5 slots against a limit of one and marks each Light weapon as 0.5. Check ranged weapons separately, verify the GM report shows 0.5 excess, and save/reload the setting. If a custom weapon is both Light and Heavy/Two-Handed, verify an enabled two-slot rule takes priority.

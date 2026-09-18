@@ -58,6 +58,22 @@ test('zero limits mark every equipped item and ignore unequipped entries', () =>
   assert.ok(group.items.every(i => i.excess));
 });
 
+test('Light weapons preserve half-slot totals and excess candidates in GM reports', () => {
+  const rules = config(); rules.lightCountsHalf = true;
+  rules.weapons.melee = { enabled: true, limit: 1 };
+  const character = actor('hero', ['first', 'second', 'third'].map((id, index) => weapon(id, 'simpleM', ['lgt'], index)), ['Player']);
+  const [group] = auditActor(character, rules).equipment;
+  assert.equal(group.total, 1.5);
+  assert.equal(group.excess, 0.5);
+  assert.deepEqual(group.items.filter(item => item.excess).map(item => item.name), ['third']);
+  assert.equal(group.items[2].excessAmount, 0.5);
+  const audit = auditPlayers([{ key: character.uuid, actor: character }], [player('Player')], rules);
+  const html = capacityReportHtml(audit, { equipment: [] });
+  assert.match(html, /1\.5 \/ 1/);
+  assert.match(html, /0\.5 over capacity/);
+  assert.match(html, /counts as 0\.5/);
+});
+
 test('custom categories and equal inventory sort values produce stable excess candidates', () => {
   const rules = config(); rules.equipment['custom.cloak'] = { enabled: true, limit: 1 };
   const cloaks = ['c', 'a', 'b'].map(id => ({ ...ring(id), system: { type: { value: 'custom.cloak' }, equipped: true } }));

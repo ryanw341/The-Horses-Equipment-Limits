@@ -7,7 +7,7 @@ import { INITIAL_AUDIT_SETTING, capacityReportOptions, showCapacityReport } from
 
 export function getConfig() {
   const config = game.settings.get(MODULE_ID, 'rules');
-  return { ...config, carry: carryConfig(config) };
+  return { lightCountsHalf: false, ...config, carry: carryConfig(config) };
 }
 
 const checked = value => value ? ' checked' : '';
@@ -64,8 +64,9 @@ function content(categories, config, sources) {
     <fieldset><legend>Weapon counting</legend>
       <label class="hel-check"><input type="checkbox" name="heavyCountsTwo"${checked(config.heavyCountsTwo)}> Heavy weapons count as two slots</label>
       <label class="hel-check"><input type="checkbox" name="twoHandedCountsTwo"${checked(config.twoHandedCountsTwo)}> Two-Handed weapons count as two slots</label>
-      <p class="hel-hint">Applies to both weapon groups. A weapon with both properties still counts as two.
-        Each equipped item entry counts once, regardless of its stack quantity.</p>
+      <label class="hel-check"><input type="checkbox" name="lightCountsHalf"${checked(config.lightCountsHalf)}> Light weapons count as half a slot (0.5)</label>
+      <p class="hel-hint">Applies to both weapon groups. Enabled Heavy or Two-Handed rules take priority over Light and cost two slots total.
+        Each equipped entry uses its slot cost regardless of stack quantity. Two Light weapons use one slot when the Light option applies.</p>
     </fieldset>
     <details><summary>Weapon type assignments, including custom types</summary>
       <p class="hel-hint">Thrown melee weapons stay in the melee group. Types without a system melee/ranged assignment
@@ -94,6 +95,7 @@ export function readForm(form, categories, previous, options = {}) {
     attunementReminder: field('attunementReminder').checked,
     heavyCountsTwo: field('heavyCountsTwo').checked,
     twoHandedCountsTwo: field('twoHandedCountsTwo').checked,
+    lightCountsHalf: field('lightCountsHalf')?.checked ?? previous.lightCountsHalf ?? false,
     equipment: Object.fromEntries(categories.equipment.map(({ key, label }, index) => [key, {
       label, enabled: field(`equipment-${index}-enabled`).checked, limit: number(`equipment-${index}-limit`)
     }])),

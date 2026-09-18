@@ -95,6 +95,54 @@ test('weighted weapons consume slots in their own weapon group', () => {
   assert.equal(equipmentViolations([], [weapon('bow', 'martialR', ['hvy'])], rules)[0].after, 2);
 });
 
+test('Light half-slot counting is optional, accepts property formats, and only affects weapons', () => {
+  const rules = config(), dagger = weapon('dagger', 'simpleM', ['lgt']);
+  assert.equal(rules.lightCountsHalf, false);
+  assert.equal(itemCost(dagger, rules), 1);
+  delete rules.lightCountsHalf;
+  assert.equal(itemCost(dagger, rules), 1, 'Older saved settings retain the original counting');
+  rules.lightCountsHalf = true;
+  for (const properties of [['lgt'], new Set(['lgt']), { lgt: true }]) {
+    assert.equal(itemCost(weapon('light', 'simpleM', properties), rules), 0.5);
+  }
+  dagger.system.quantity = 20;
+  assert.equal(itemCost(dagger, rules), 0.5);
+  assert.equal(itemCost(weapon('ordinary'), rules), 1);
+  const armor = equipment('leather', 'light'); armor.system.properties = ['lgt'];
+  assert.equal(itemCost(armor, rules), 1);
+});
+
+test('enabled two-slot rules take priority over Light without stacking', () => {
+  const rules = config(); rules.lightCountsHalf = true;
+  const lightHeavy = weapon('custom-heavy', 'martialM', ['lgt', 'hvy']);
+  const lightTwo = weapon('custom-two', 'martialM', ['lgt', 'two']);
+  assert.equal(itemCost(lightHeavy, rules), 0.5);
+  assert.equal(itemCost(lightTwo, rules), 0.5);
+  rules.heavyCountsTwo = true;
+  assert.equal(itemCost(lightHeavy, rules), 2);
+  assert.equal(itemCost(lightTwo, rules), 0.5);
+  rules.heavyCountsTwo = false; rules.twoHandedCountsTwo = true;
+  assert.equal(itemCost(lightHeavy, rules), 0.5);
+  assert.equal(itemCost(lightTwo, rules), 2);
+  rules.heavyCountsTwo = true;
+  assert.equal(itemCost(weapon('all', 'martialM', ['lgt', 'hvy', 'two']), rules), 2);
+});
+
+test('two Light weapons fit one slot in either group and warnings retain half-slot costs', () => {
+  const rules = config(); rules.lightCountsHalf = true; rules.weapons.melee.limit = 1;
+  for (const type of ['simpleM', 'simpleR']) {
+    const weapons = ['first', 'second', 'third'].map(id => weapon(id, type, ['lgt']));
+    assert.deepEqual(equipmentViolations([], weapons.slice(0, 2), rules), []);
+    const errors = equipmentViolations(weapons.slice(0, 2), weapons, rules);
+    assert.equal(errors[0].before, 1);
+    assert.equal(errors[0].after, 1.5);
+    assert.equal(errors[0].limit, 1);
+    assert.equal(errors[0].key, type === 'simpleM' ? 'weapon:melee' : 'weapon:ranged');
+    assert.match(reportHtml('Hero', errors, null, true, { equipment: [] }), /counts as 0\.5/);
+    assert.deepEqual(equipmentViolations(weapons, weapons.slice(0, 2), rules), []);
+  }
+});
+
 test('decreasing an already excessive loadout and unrelated edits remain allowed', () => {
   const items = [equipment('a'), equipment('b'), equipment('c'), equipment('d')];
   assert.deepEqual(equipmentViolations(items, items.slice(0, 3), config()), []);

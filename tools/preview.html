@@ -107,7 +107,7 @@
   });
   document.querySelector('#capacity').addEventListener('click', async () => {
     const rules = defaultConfig(); rules.equipment.ring = { enabled: true, limit: 2 };
-    rules.weapons.melee = { enabled: true, limit: 2 }; rules.heavyCountsTwo = true;
+    rules.weapons.melee = { enabled: true, limit: 2 }; rules.heavyCountsTwo = true; rules.lightCountsHalf = true;
     rules.carry.ammo.enabled = true; rules.carry.ammo.categories = [categoryId('consumable', 'ammo', 'magazine')];
     rules.carry.aid.enabled = true; rules.carry.aid.categories = [categoryId('consumable', 'potion', 'healing')];
     rules.carry.implants.enabled = true; rules.carry.implants.categories = [categoryId('equipment', 'implant')];
@@ -116,7 +116,7 @@
     game.actors = [{ id: 'hero', uuid: 'Actor.hero', name: 'Garrick', system: sampleStats,
       items: [sampleRing('Ring of Protection', 1), sampleRing('Ring of Warmth', 2), sampleRing('Ring of Spell Storing', 3),
         { id: 'sword', name: 'Greatsword', sort: 4, type: 'weapon', system: { type: { value: 'martialM' }, equipped: true, properties: ['hvy', 'two'] } },
-        { id: 'dagger', name: 'Dagger', sort: 5, type: 'weapon', system: { type: { value: 'simpleM' }, equipped: true, properties: [] } },
+        { id: 'dagger', name: 'Dagger', sort: 5, type: 'weapon', system: { type: { value: 'simpleM' }, equipped: true, properties: ['lgt'] } },
         { ...magazine(10), sort: 6 },
         { id: 'aid', name: 'Medkits', sort: 7, type: 'consumable', system: { quantity: 14, type: { value: 'potion', subtype: 'healing' } } },
         { id: 'implants', name: 'Cybernetic implants', sort: 8, type: 'equipment', system: { quantity: 5, type: { value: 'implant' } } }],

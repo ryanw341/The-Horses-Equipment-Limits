@@ -10,6 +10,7 @@ export function defaultConfig() {
     attunementReminder: false,
     heavyCountsTwo: false,
     twoHandedCountsTwo: false,
+    lightCountsHalf: false,
     equipment: {},
     weapons: {
       melee: { enabled: false, limit: 2 },
@@ -45,8 +46,10 @@ export function hasProperty(item, property) {
 
 export function itemCost(item, config) {
   if (item.type !== 'weapon') return 1;
-  return ((config.heavyCountsTwo && hasProperty(item, 'hvy'))
-    || (config.twoHandedCountsTwo && hasProperty(item, 'two'))) ? 2 : 1;
+  // Enabled two-slot rules take precedence over Light on custom weapons with both properties.
+  if ((config.heavyCountsTwo && hasProperty(item, 'hvy'))
+    || (config.twoHandedCountsTwo && hasProperty(item, 'two'))) return 2;
+  return config.lightCountsHalf && hasProperty(item, 'lgt') ? 0.5 : 1;
 }
 
 export function categoryKey(item, config, systemMap = {}) {

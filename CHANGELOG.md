@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1
+
+- Add a separate, disabled-by-default Light weapon option: matching weapons use half a slot in their melee or ranged group.
+- Enabled Heavy or Two-Handed two-slot rules take priority if a custom weapon also has the Light property.
+- Show fractional item costs in player warnings and GM capacity reports, with fractional totals and excesses preserved.
+
 ## 0.3.0
 
 - Add independently enabled Ammo, Aid, and Implant carried-capacity sections, including unequipped inventory.

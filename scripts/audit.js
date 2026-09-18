@@ -78,7 +78,7 @@ export function auditPlayers(entries, users, config, systemMap = {}) {
 
 function capacityItems(items, carried = false) {
   return `<ul>${items.map(item => `<li${item.excess ? ' class="hel-excess"' : ''}>${esc(item.name)}
-    ${item.cost > 1 ? `<span>(counts as ${item.cost})</span>` : ''}
+    ${item.cost !== 1 ? `<span>(counts as ${item.cost})</span>` : ''}
     ${item.excess ? `<strong class="hel-excess-label">Excess candidate${carried ? ` (${item.excessAmount} over)` : ''}</strong>` : ''}</li>`).join('')}</ul>`;
 }
 

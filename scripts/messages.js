@@ -15,7 +15,7 @@ export function categoryLabel(key, categories) {
 }
 
 function itemList(items) {
-  return items.length ? `<ul>${items.map(item => `<li>${escapeHtml(item.name)}${item.cost > 1
+  return items.length ? `<ul>${items.map(item => `<li>${escapeHtml(item.name)}${item.cost !== 1
     ? ` <span>(counts as ${item.cost})</span>` : ''}</li>`).join('')}</ul>` : '<p>None.</p>';
 }
 
