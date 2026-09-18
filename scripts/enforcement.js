@@ -2,18 +2,25 @@ import { MODULE_ID, equipmentViolations, attunementViolation } from './rules.js'
 import { getConfig } from './settings.js';
 import { scanCategories } from './discovery.js';
 import { showReport } from './messages.js';
+import { carryViolations } from './carry.js';
 
 /** A small prepared snapshot retains effect-adjusted equipment/attunement state. */
 export function snapshot(item) {
   const system = item.system ?? {};
   return {
     _id: item.id ?? item._id,
+    uuid: item.uuid,
+    folder: typeof item.folder === 'string' ? item.folder : item.folder?.id,
+    _stats: { compendiumSource: item._stats?.compendiumSource, duplicateSource: item._stats?.duplicateSource },
+    flags: { core: { sourceId: item.flags?.core?.sourceId } },
     name: item.name,
     type: item.type,
     system: {
       equipped: system.equipped,
       attuned: system.attuned,
-      type: typeof system.type === 'string' ? system.type : { value: system.type?.value },
+      type: typeof system.type === 'string' ? system.type : { value: system.type?.value, subtype: system.type?.subtype },
+      quantity: system.quantity,
+      uses: { max: system.uses?.max, spent: system.uses?.spent, value: system.uses?.value, _initialSpent: system.uses?.spent },
       armor: { type: system.armor?.type },
       weaponType: system.weaponType,
       properties: system.properties instanceof Set ? [...system.properties] : system.properties
@@ -22,7 +29,7 @@ export function snapshot(item) {
 }
 
 export function evaluateOperation(before, after, actor, config, systemMap) {
-  const equipment = equipmentViolations(before, after, config, systemMap);
+  const equipment = [...equipmentViolations(before, after, config, systemMap), ...carryViolations(before, after, actor, config)];
   const attunement = config.enabled && config.attunementReminder
     ? attunementViolation(before, after, actor.system?.attributes?.attunement?.max) : null;
   return { equipment, attunement, blocked: config.mode === 'block' && equipment.length > 0 };

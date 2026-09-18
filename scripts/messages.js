@@ -1,3 +1,5 @@
+import { CARRY_LABELS, COUNT_LABELS } from './carry.js';
+
 export function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -7,6 +9,7 @@ export function escapeHtml(value) {
 export function categoryLabel(key, categories) {
   if (key === 'weapon:melee') return 'Melee weapons';
   if (key === 'weapon:ranged') return 'Ranged weapons';
+  if (key.startsWith('carry:')) return CARRY_LABELS[key.slice(6)] ?? key;
   const type = key.slice('equipment:'.length);
   return categories.equipment.find(category => category.key === type)?.label || type || 'Uncategorized';
 }
@@ -19,10 +22,10 @@ function itemList(items) {
 export function reportHtml(actorName, violations, attunement, blocked, categories) {
   const equipment = violations.map(violation => `<section>
     <h3>${escapeHtml(categoryLabel(violation.key, categories))}</h3>
-    <p>Limit: <strong>${violation.limit}</strong>. Currently equipped: ${violation.before}.
+    <p>Limit: <strong>${violation.limit}</strong>. Currently ${violation.count ? `carried (${COUNT_LABELS[violation.count]})` : 'equipped'}: ${violation.before}.
       This change would use <strong>${violation.after}</strong>.</p>
-    <h4>Already equipped</h4>${itemList(violation.existing)}
-    <h4>Equipped after the requested change</h4>${itemList(violation.proposed)}
+    <h4>Already ${violation.count ? 'carried' : 'equipped'}</h4>${itemList(violation.existing)}
+    <h4>${violation.count ? 'Carried' : 'Equipped'} after the requested change</h4>${itemList(violation.proposed)}
   </section>`).join('');
   const reminder = attunement ? `<section><h3>Attunement reminder</h3>
     <p>Attunement limit: <strong>${attunement.limit}</strong>. This change would attune
@@ -31,7 +34,7 @@ export function reportHtml(actorName, violations, attunement, blocked, categorie
     <h4>Attuned after the requested change</h4>${itemList(attunement.proposed)}
   </section>` : '';
   return `<div class="hel-report"><p><strong>${escapeHtml(actorName)}</strong>: ${blocked
-    ? 'This change was blocked. Unequip an item in the category first.'
+    ? `This change was blocked. ${violations.some(violation => violation.count) ? 'Remove or reduce carried items to free capacity. Unequipping does not reduce carried totals.' : 'Unequip an item in the category first.'}`
     : 'This change is allowed. Please check the limits below.'}</p>${equipment}${reminder}</div>`;
 }
 

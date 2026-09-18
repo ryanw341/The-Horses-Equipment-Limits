@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { defaultConfig } from '../scripts/rules.js';
 import { checkOperation, registerEnforcement } from '../scripts/enforcement.js';
 import { readForm, registerSettings } from '../scripts/settings.js';
+import { categoryId } from '../scripts/carry.js';
 
 let config, reports, registered;
 const player = { id: 'player', isGM: false };
@@ -218,4 +219,48 @@ test('saving limits shows the capacity report with the newly saved rules', async
   assert.match(reports[0].content, /3 \/ 2/);
   assert.match(reports[0].content, /Excess candidate/);
   assert.equal(saved.get('initialCapacityReportShown'), true);
+});
+
+function enableCarriedRings() {
+  config.equipment.ring.enabled = false;
+  config.carry.ammo.enabled = true;
+  config.carry.ammo.categories = [categoryId('equipment', 'ring')];
+  return config.carry.ammo;
+}
+
+test('carried capacity blocks stack increases on unequipped items and warns in warn mode', () => {
+  enableCarriedRings();
+  const magazine = item('mags'); magazine.system.quantity = 2;
+  const parent = actor([magazine]); // Missing stats use the configured minimum of two.
+  const operation = { parent, updates: [{ _id: 'mags', 'system.quantity': 3 }] };
+  assert.equal(checkOperation([], operation, player, false), false);
+  assert.match(reports[0].content, /Already carried/);
+  config.mode = 'warn';
+  assert.equal(checkOperation([], operation, player, false), undefined);
+  assert.equal(magazine.system.quantity, 2);
+});
+
+test('carried item creation checks the combined quantities and leaves consumption reductions allowed', () => {
+  enableCarriedRings();
+  const parent = actor([]), first = item('a'), second = item('b');
+  first.system.quantity = 2; second.system.quantity = 1;
+  assert.equal(checkOperation([first, second], { parent }, player, true), false);
+  parent.items = [first]; first.system.quantity = 8;
+  assert.equal(checkOperation([], { parent, updates: [{ _id: 'a', 'system.quantity': 7 }] }, player, false), undefined);
+});
+
+test('remaining Uses capacity checks refills, permits spending, and accounts for projected spent values', () => {
+  const rule = enableCarriedRings(); rule.count = 'uses';
+  const magazine = item('mags'); magazine.system.quantity = 1;
+  magazine.system.uses = { max: '10', spent: 8, value: 2 };
+  const parent = actor([magazine]);
+  assert.equal(checkOperation([], { parent, updates: [{ _id: 'mags', 'system.uses.spent': 7 }] }, player, false), false);
+  assert.equal(checkOperation([], { parent, updates: [{ _id: 'mags', 'system.uses.spent': 9 }] }, player, false), undefined);
+});
+
+test('source UUID and compendium matching survive the enforcement snapshot', () => {
+  const rule = enableCarriedRings(); rule.categories = []; rule.compendiums = ['world.magazines'];
+  const magazine = item('mags'); magazine.system.quantity = 3;
+  magazine._stats = { compendiumSource: 'Compendium.world.magazines.Item.magazine' };
+  assert.equal(checkOperation([magazine], { parent: actor([]) }, player, true), false);
 });

@@ -11,7 +11,7 @@
   h1 { font-size: 22px; margin-bottom: 8px; }
   .window { max-width: 720px; margin: auto; padding: 20px; background: #30353d; border: 1px solid #62666d; border-radius: 10px; }
   .window > h2 { font-size: 20px; margin-top: 0; }
-  button, input, select { color: inherit; background: #24282e; border: 1px solid #74777c; border-radius: 4px; padding: 6px; font: inherit; }
+  button, input, select, textarea { color: inherit; background: #24282e; border: 1px solid #74777c; border-radius: 4px; padding: 6px; font: inherit; }
   button { cursor: pointer; }
   button:hover { background: #414955; }
   input[type=checkbox] { accent-color: #d3b476; }
@@ -27,6 +27,7 @@
   <button id="open">Open settings</button>
   <button id="custom">Register a custom category</button>
   <button id="report">Example player message</button>
+  <button id="carried">Example carried-capacity message</button>
   <button id="capacity">Example player capacity report</button>
   <div id="status" role="status"></div>
 </header>
@@ -36,6 +37,7 @@
   import { registerSettings } from '../scripts/settings.js';
   import { showReport } from '../scripts/messages.js';
   import { showCapacityReport } from '../scripts/audit.js';
+  import { categoryId, carryViolations } from '../scripts/carry.js';
   let config = defaultConfig(), menu;
   const status = text => document.querySelector('#status').textContent = text;
   class PreviewDialog {
@@ -64,18 +66,25 @@
   globalThis.ui = { notifications: { info: status, warn: status } };
   globalThis.CONFIG = { DND5E: {
     equipmentTypes: { light: 'Light armor', medium: 'Medium armor', heavy: 'Heavy armor', shield: 'Shields',
-      clothing: 'Clothing', ring: 'Rings', rod: 'Rods', wand: 'Wands', wondrous: 'Wondrous items' },
+      clothing: 'Clothing', ring: 'Rings', rod: 'Rods', wand: 'Wands', wondrous: 'Wondrous items', implant: 'Implants' },
+    consumableTypes: { ammo: { label: 'Ammunition', subtypes: { magazine: 'Magazines', bullet: 'Bullets' } },
+      potion: { label: 'Potions', subtypes: { healing: 'Healing' } } },
     weaponTypes: { simpleM: 'Simple melee', martialM: 'Martial melee', simpleR: 'Simple ranged', martialR: 'Martial ranged', natural: 'Natural', laser: 'Custom laser' },
     weaponTypeMap: { simpleM: 'melee', martialM: 'melee', simpleR: 'ranged', martialR: 'ranged' }
   } };
   globalThis.game = {
-    user: { isGM: true }, users: [], items: [], actors: [], scenes: [], i18n: { localize: value => value },
+    user: { isGM: true }, users: [], actors: [], scenes: [], i18n: { localize: value => value },
+    items: [{ id: 'magazine', uuid: 'Item.magazine', documentName: 'Item', name: 'Rifle magazine', type: 'consumable',
+      folder: 'ammo', system: { type: { value: 'ammo', subtype: 'magazine' }, quantity: 1 } }],
+    folders: [{ id: 'ammo', type: 'Item', name: 'Ammunition' }, { id: 'aid', type: 'Item', name: 'Medical supplies' }],
+    packs: [{ collection: 'world.implants', documentName: 'Item', metadata: { label: 'Custom implants' } }],
     settings: { menus: new Map(), get: () => config, register() {}, registerMenu(id, key, value) {
       this.menus.set(`${id}.${key}`, value); if (key === 'configure') menu = value.type;
     }, async set(id, key, value) {
       if (key === 'rules') { config = value; document.querySelector('#open').textContent = 'Reopen saved settings'; }
     } }
   };
+  globalThis.fromUuid = async uuid => game.items.find(item => item.uuid === uuid) ?? null;
   registerSettings();
   document.querySelector('#open').addEventListener('click', () => new menu().render());
   document.querySelector('#custom').addEventListener('click', () => {
@@ -87,15 +96,30 @@
     showReport({ name: 'Test character' }, equipmentViolations(items.slice(0, 2), items, rules), null, true,
       { equipment: [{ key: 'ring', label: 'Rings' }] });
   });
+  const sampleStats = { attributes: { prof: 3 }, abilities: { str: { mod: 2 }, con: { mod: 1 } } };
+  const magazine = quantity => ({ id: 'magazines', name: 'Rifle magazines', type: 'consumable',
+    system: { quantity, equipped: false, type: { value: 'ammo', subtype: 'magazine' } } });
+  document.querySelector('#carried').addEventListener('click', () => {
+    const rules = defaultConfig(); rules.carry.ammo.enabled = true;
+    rules.carry.ammo.categories = [categoryId('consumable', 'ammo', 'magazine')];
+    const hero = { name: 'Garrick', system: sampleStats };
+    showReport(hero, carryViolations([magazine(6)], [magazine(7)], hero, rules), null, true, { equipment: [] });
+  });
   document.querySelector('#capacity').addEventListener('click', async () => {
     const rules = defaultConfig(); rules.equipment.ring = { enabled: true, limit: 2 };
     rules.weapons.melee = { enabled: true, limit: 2 }; rules.heavyCountsTwo = true;
+    rules.carry.ammo.enabled = true; rules.carry.ammo.categories = [categoryId('consumable', 'ammo', 'magazine')];
+    rules.carry.aid.enabled = true; rules.carry.aid.categories = [categoryId('consumable', 'potion', 'healing')];
+    rules.carry.implants.enabled = true; rules.carry.implants.categories = [categoryId('equipment', 'implant')];
     const sampleRing = (name, sort) => ({ id: name, name, sort, type: 'equipment', system: { type: { value: 'ring' }, equipped: true } });
     game.users = [{ id: 'alex', name: 'Alex', isGM: false }, { id: 'morgan', name: 'Morgan (offline)', isGM: false }];
-    game.actors = [{ id: 'hero', uuid: 'Actor.hero', name: 'Garrick',
+    game.actors = [{ id: 'hero', uuid: 'Actor.hero', name: 'Garrick', system: sampleStats,
       items: [sampleRing('Ring of Protection', 1), sampleRing('Ring of Warmth', 2), sampleRing('Ring of Spell Storing', 3),
         { id: 'sword', name: 'Greatsword', sort: 4, type: 'weapon', system: { type: { value: 'martialM' }, equipped: true, properties: ['hvy', 'two'] } },
-        { id: 'dagger', name: 'Dagger', sort: 5, type: 'weapon', system: { type: { value: 'simpleM' }, equipped: true, properties: [] } }],
+        { id: 'dagger', name: 'Dagger', sort: 5, type: 'weapon', system: { type: { value: 'simpleM' }, equipped: true, properties: [] } },
+        { ...magazine(10), sort: 6 },
+        { id: 'aid', name: 'Medkits', sort: 7, type: 'consumable', system: { quantity: 14, type: { value: 'potion', subtype: 'healing' } } },
+        { id: 'implants', name: 'Cybernetic implants', sort: 8, type: 'equipment', system: { quantity: 5, type: { value: 'implant' } } }],
       testUserPermission: user => user.id === 'alex'
     }, { id: 'rogue', uuid: 'Actor.rogue', name: 'Nyx', items: [sampleRing('Ring of Evasion', 1)], testUserPermission: user => user.id === 'morgan' }];
     config = rules;

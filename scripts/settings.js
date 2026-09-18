@@ -1,10 +1,13 @@
 import { MODULE_ID, defaultConfig, weaponGroup } from './rules.js';
-import { scanCategories } from './discovery.js';
+import { scanCategories, scanCarrySources, prepareCarrySources } from './discovery.js';
+import { carryConfig } from './carry.js';
+import { carrySections, readCarryForm } from './carry-ui.js';
 import { escapeHtml as esc } from './messages.js';
 import { INITIAL_AUDIT_SETTING, capacityReportOptions, showCapacityReport } from './audit.js';
 
 export function getConfig() {
-  return game.settings.get(MODULE_ID, 'rules');
+  const config = game.settings.get(MODULE_ID, 'rules');
+  return { ...config, carry: carryConfig(config) };
 }
 
 const checked = value => value ? ' checked' : '';
@@ -39,13 +42,13 @@ function weaponSection(group, config) {
   </fieldset>`;
 }
 
-function content(categories, config) {
+function content(categories, config, sources) {
   return `<div class="hel-settings">
     <p>Choose which categories to limit. Disabled categories are unrestricted. Limits apply separately to each actor.</p>
     <fieldset><legend>Behavior</legend>
-      <label class="hel-check"><input type="checkbox" name="enabled"${checked(config.enabled)}> Enable equipment limits and reminders</label>
-      <label class="hel-limit">When equipment exceeds a limit
-        <select name="mode"><option value="block"${config.mode === 'block' ? ' selected' : ''}>Block equipping</option>
+      <label class="hel-check"><input type="checkbox" name="enabled"${checked(config.enabled)}> Enable equipment limits, carried capacity, and reminders</label>
+      <label class="hel-limit">When equipment or carried capacity exceeds a limit
+        <select name="mode"><option value="block"${config.mode === 'block' ? ' selected' : ''}>Block the change</option>
           <option value="warn"${config.mode === 'warn' ? ' selected' : ''}>Warn only</option></select></label>
       <label class="hel-check"><input type="checkbox" name="applyToGM"${checked(config.applyToGM)}> Apply to GM actions too</label>
       <label class="hel-check"><input type="checkbox" name="attunementReminder"${checked(config.attunementReminder)}> Remind when attunement exceeds the actor's maximum</label>
@@ -70,11 +73,12 @@ function content(categories, config) {
       <table><thead><tr><th>Weapon type</th><th>Count toward</th></tr></thead>
         <tbody class="hel-weapon-rows">${weaponRows(categories, config)}</tbody></table>
     </details>
+    <div class="hel-carry-sections">${carrySections(config, sources)}</div>
   </div>`;
 }
 
 /** Indexed field names avoid dots or punctuation in custom category IDs becoming paths. */
-export function readForm(form, categories, previous) {
+export function readForm(form, categories, previous, options = {}) {
   const field = name => form.elements.namedItem(name);
   const number = name => {
     const value = field(name).value;
@@ -96,7 +100,8 @@ export function readForm(form, categories, previous) {
     weapons: Object.fromEntries(['melee', 'ranged'].map(group => [group, {
       enabled: field(`${group}-enabled`).checked, limit: number(`${group}-limit`)
     }])),
-    weaponTypes: Object.fromEntries(categories.weapons.map(({ key }, index) => [key, field(`weapon-type-${index}`).value]))
+    weaponTypes: Object.fromEntries(categories.weapons.map(({ key }, index) => [key, field(`weapon-type-${index}`).value])),
+    carry: readCarryForm(form, previous, options)
   };
 }
 
@@ -113,16 +118,17 @@ export function registerSettings() {
     constructor(options = {}) {
       const config = getConfig();
       const categories = scanCategories(config);
+      const sources = scanCarrySources(config);
       super({
         ...options,
         window: { title: "The Horse's Equipment Limits" },
         position: { width: 720 },
-        content: content(categories, config),
+        content: content(categories, config, sources),
         buttons: [{
           action: 'save', label: 'Save limits', default: true,
           callback: async (event, button, dialog) => {
             if (!game.user.isGM) throw new Error('Only a GM can change equipment limits.');
-            const next = readForm(button.form, dialog.categories, getConfig());
+            const next = await prepareCarrySources(readForm(button.form, dialog.categories, getConfig()));
             await game.settings.set(MODULE_ID, 'rules', next);
             ui.notifications.info('Equipment limits saved.');
             await showCapacityReport(next, { remember: true });
@@ -136,10 +142,11 @@ export function registerSettings() {
       super._onRender(context, options);
       this.element.querySelector('.hel-rescan').addEventListener('click', () => {
         try {
-          const draft = readForm(this.form, this.categories, getConfig());
+          const draft = readForm(this.form, this.categories, getConfig(), { requireSources: false });
           this.categories = scanCategories(draft);
           this.element.querySelector('.hel-equipment-rows').innerHTML = equipmentRows(this.categories, draft);
           this.element.querySelector('.hel-weapon-rows').innerHTML = weaponRows(this.categories, draft);
+          this.element.querySelector('.hel-carry-sections').innerHTML = carrySections(draft, scanCarrySources(draft));
           ui.notifications.info('Categories refreshed. Save limits to keep your changes.');
         } catch (error) {
           ui.notifications.warn(error.message);
@@ -150,7 +157,7 @@ export function registerSettings() {
 
   game.settings.registerMenu(MODULE_ID, 'configure', {
     name: 'Equipment Limits', label: 'Configure Equipment Limits',
-    hint: 'Set category limits, weapon counting, and attunement reminders.',
+    hint: 'Set equipment limits, ammo/aid/implant capacities, and attunement reminders.',
     icon: 'fa-solid fa-shield-halved', type: EquipmentLimitsConfig, restricted: true
   });
 
@@ -159,7 +166,7 @@ export function registerSettings() {
   }
   game.settings.registerMenu(MODULE_ID, 'capacityReport', {
     name: 'Player Equipment Capacity', label: 'View Player Capacity',
-    hint: 'Review players exceeding equipment or attunement limits and see the excess items.',
+    hint: 'Review players exceeding equipment, carried capacity, or attunement limits and see the excess items.',
     icon: 'fa-solid fa-list-check', type: PlayerCapacityReport, restricted: true
   });
 }

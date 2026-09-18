@@ -1,4 +1,5 @@
 /** Pure rules: no Foundry globals, document writes, or sheet dependencies. */
+import { defaultCarryConfig } from './carry.js';
 export const MODULE_ID = 'the-horses-equipment-limits';
 
 export function defaultConfig() {
@@ -14,7 +15,8 @@ export function defaultConfig() {
       melee: { enabled: false, limit: 2 },
       ranged: { enabled: false, limit: 2 }
     },
-    weaponTypes: {}
+    weaponTypes: {},
+    carry: defaultCarryConfig()
   };
 }
 

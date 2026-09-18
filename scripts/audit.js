@@ -1,6 +1,7 @@
 import { MODULE_ID, equipmentViolations, attunementViolation } from './rules.js';
 import { scanCategories } from './discovery.js';
 import { escapeHtml as esc, categoryLabel } from './messages.js';
+import { carryConfig, carryViolations, COUNT_LABELS } from './carry.js';
 
 export const INITIAL_AUDIT_SETTING = 'initialCapacityReportShown';
 
@@ -9,7 +10,7 @@ function markExcess(items, limit) {
   let used = 0;
   return items.map(item => {
     used += item.cost;
-    return { ...item, excess: used > limit };
+    return { ...item, excess: used > limit, excessAmount: Math.min(item.cost, Math.max(0, used - limit)) };
   });
 }
 
@@ -18,8 +19,9 @@ export function auditActor(actor, config, systemMap = {}) {
   // Sort a copy: never reorder the actor's actual inventory. IDs break sort ties consistently.
   const items = Array.from(actor.items).sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0)
     || String(a.id ?? a._id ?? '').localeCompare(String(b.id ?? b._id ?? '')));
-  const equipment = equipmentViolations([], items, config, systemMap).map(violation => ({
+  const equipment = [...equipmentViolations([], items, config, systemMap), ...carryViolations([], items, actor, config)].map(violation => ({
     key: violation.key, limit: violation.limit, total: violation.after,
+    ...(violation.count ? { count: violation.count } : {}),
     excess: violation.after - violation.limit, items: markExcess(violation.proposed, violation.limit)
   }));
   const attunement = config.attunementReminder
@@ -51,7 +53,8 @@ export function auditPlayers(entries, users, config, systemMap = {}) {
   const validRule = rule => rule?.enabled && Number.isInteger(rule.limit) && rule.limit >= 0;
   const hasChecks = config.enabled && (config.attunementReminder
     || Object.values(config.equipment ?? {}).some(validRule)
-    || Object.values(config.weapons ?? {}).some(validRule));
+    || Object.values(config.weapons ?? {}).some(validRule)
+    || Object.values(carryConfig(config)).some(rule => rule.enabled));
   const players = Array.from(users).filter(user => !user.isGM)
     .sort((a, b) => a.name.localeCompare(b.name));
   const results = new Map(), checked = new Set();
@@ -73,16 +76,16 @@ export function auditPlayers(entries, users, config, systemMap = {}) {
   return { enabled: config.enabled, hasChecks, actorCount: checked.size, players: breakdown };
 }
 
-function capacityItems(items) {
+function capacityItems(items, carried = false) {
   return `<ul>${items.map(item => `<li${item.excess ? ' class="hel-excess"' : ''}>${esc(item.name)}
     ${item.cost > 1 ? `<span>(counts as ${item.cost})</span>` : ''}
-    ${item.excess ? '<strong class="hel-excess-label">Excess candidate</strong>' : ''}</li>`).join('')}</ul>`;
+    ${item.excess ? `<strong class="hel-excess-label">Excess candidate${carried ? ` (${item.excessAmount} over)` : ''}</strong>` : ''}</li>`).join('')}</ul>`;
 }
 
 export function capacityReportHtml(audit, categories) {
   let summary;
   if (!audit.enabled) summary = 'Equipment limits and reminders are disabled. Enable them in Configure Equipment Limits to check capacity.';
-  else if (!audit.hasChecks) summary = 'No category limits or attunement reminders are enabled yet. Configure limits first; a new report will open when you save.';
+  else if (!audit.hasChecks) summary = 'No category limits, carried capacity limits, or attunement reminders are enabled yet. Configure limits first; a new report will open when you save.';
   else if (!audit.players.length) summary = 'No player accounts were found in this world.';
   else if (!audit.actorCount) summary = 'No player-controlled actors were found. Assign a character or grant a player Owner permission to include it.';
   else if (!audit.players.some(player => player.overCapacity.length)) summary = 'No players are exceeding the enabled limits.';
@@ -97,15 +100,15 @@ export function capacityReportHtml(audit, categories) {
     <h3>${esc(player.playerName)}</h3>${player.overCapacity.map(actor => `<div class="hel-audit-actor">
       <h4>${esc(actor.actorName)}${actor.location ? ` <small>(${esc(actor.location)})</small>` : ''}</h4>
       ${actor.equipment.map(group => `<h5>${esc(categoryLabel(group.key, categories))}</h5>
-        <p><strong>${group.total} / ${group.limit}</strong> equipped slots. <strong>${group.excess} over capacity.</strong></p>
-        ${capacityItems(group.items)}`).join('')}
+        <p><strong>${group.total} / ${group.limit}</strong> ${group.count ? `carried (${COUNT_LABELS[group.count]})` : 'equipped slots'}. <strong>${group.excess} over capacity.</strong></p>
+        ${capacityItems(group.items, Boolean(group.count))}`).join('')}
       ${actor.attunement ? `<h5>Attunement</h5><p><strong>${actor.attunement.total} / ${actor.attunement.limit}</strong>
         attuned items. <strong>${actor.attunement.excess} over capacity.</strong></p>${capacityItems(actor.attunement.items)}` : ''}
     </div>`).join('')}</section>`).join('');
   return `<div class="hel-report hel-capacity-report"><p>${summary}</p>
     ${audit.hasChecks ? `<p>${audit.actorCount} distinct player-controlled actor inventory/inventories checked, including offline players.</p>` : ''}
     ${players ? `<table><thead><tr><th>Player</th><th>Actor inventories</th><th>Status</th></tr></thead><tbody>${players}</tbody></table>` : ''}
-    ${details ? '<p>Excess candidates are marked in inventory sort order, not equip time. Players may choose other items to unequip instead. Nothing has been unequipped or unattuned.</p>' : ''}
+    ${details ? '<p>Excess candidates are marked in inventory sort order, not equip time. Players may choose which equipment to unequip or which carried items to remove. Unequipping does not reduce carried capacity. No items have been changed.</p>' : ''}
     ${details}</div>`;
 }
 
