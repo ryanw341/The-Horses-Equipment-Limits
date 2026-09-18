@@ -25,6 +25,13 @@
 .hel-report section { border-top: 1px solid var(--color-border-light-primary, #777); padding-top: 12px; margin-top: 12px; }
 .hel-report h4 { margin: 12px 0 4px; }
 .hel-report ul { margin-top: 4px; overflow-wrap: anywhere; }
+.hel-capacity-report table { width: 100%; }
+.hel-capacity-report th, .hel-capacity-report td { padding: 8px; text-align: left; }
+.hel-capacity-report h5 { font-size: 1em; margin: 12px 0 4px; }
+.hel-capacity-report .hel-audit-actor { margin: 12px 0; padding-left: 10px; border-left: 2px solid var(--color-border-light-primary, #777); }
+.hel-capacity-report .hel-audit-actor small { font-weight: normal; }
+.hel-capacity-report .hel-excess { font-weight: bold; }
+.hel-capacity-report .hel-excess-label { display: inline-block; margin-left: 6px; padding: 1px 6px; border: 1px solid currentColor; border-radius: 4px; font-size: .85em; }
 @media (max-width: 600px) {
   .hel-settings .hel-weapons { grid-template-columns: 1fr; gap: 0; }
 }

@@ -1,6 +1,7 @@
 import { MODULE_ID, defaultConfig, weaponGroup } from './rules.js';
 import { scanCategories } from './discovery.js';
 import { escapeHtml as esc } from './messages.js';
+import { INITIAL_AUDIT_SETTING, capacityReportOptions, showCapacityReport } from './audit.js';
 
 export function getConfig() {
   return game.settings.get(MODULE_ID, 'rules');
@@ -104,6 +105,9 @@ export function registerSettings() {
   game.settings.register(MODULE_ID, 'rules', {
     scope: 'world', config: false, type: Object, default: defaultConfig()
   });
+  game.settings.register(MODULE_ID, INITIAL_AUDIT_SETTING, {
+    scope: 'world', config: false, type: Boolean, default: false
+  });
 
   class EquipmentLimitsConfig extends foundry.applications.api.DialogV2 {
     constructor(options = {}) {
@@ -121,6 +125,7 @@ export function registerSettings() {
             const next = readForm(button.form, dialog.categories, getConfig());
             await game.settings.set(MODULE_ID, 'rules', next);
             ui.notifications.info('Equipment limits saved.');
+            await showCapacityReport(next, { remember: true });
           }
         }, { action: 'cancel', label: 'Cancel' }]
       });
@@ -147,5 +152,14 @@ export function registerSettings() {
     name: 'Equipment Limits', label: 'Configure Equipment Limits',
     hint: 'Set category limits, weapon counting, and attunement reminders.',
     icon: 'fa-solid fa-shield-halved', type: EquipmentLimitsConfig, restricted: true
+  });
+
+  class PlayerCapacityReport extends foundry.applications.api.DialogV2 {
+    constructor(options = {}) { super({ ...options, ...capacityReportOptions() }); }
+  }
+  game.settings.registerMenu(MODULE_ID, 'capacityReport', {
+    name: 'Player Equipment Capacity', label: 'View Player Capacity',
+    hint: 'Review players exceeding equipment or attunement limits and see the excess items.',
+    icon: 'fa-solid fa-list-check', type: PlayerCapacityReport, restricted: true
   });
 }

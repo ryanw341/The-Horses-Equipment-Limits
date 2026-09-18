@@ -27,6 +27,7 @@
   <button id="open">Open settings</button>
   <button id="custom">Register a custom category</button>
   <button id="report">Example player message</button>
+  <button id="capacity">Example player capacity report</button>
   <div id="status" role="status"></div>
 </header>
 <main></main>
@@ -34,6 +35,7 @@
   import { defaultConfig, equipmentViolations } from '../scripts/rules.js';
   import { registerSettings } from '../scripts/settings.js';
   import { showReport } from '../scripts/messages.js';
+  import { showCapacityReport } from '../scripts/audit.js';
   let config = defaultConfig(), menu;
   const status = text => document.querySelector('#status').textContent = text;
   class PreviewDialog {
@@ -67,9 +69,12 @@
     weaponTypeMap: { simpleM: 'melee', martialM: 'melee', simpleR: 'ranged', martialR: 'ranged' }
   } };
   globalThis.game = {
-    user: { isGM: true }, items: [], actors: [], scenes: [], i18n: { localize: value => value },
-    settings: { get: () => config, register() {}, registerMenu(id, key, value) { menu = value.type; },
-      async set(id, key, value) { config = value; document.querySelector('#open').textContent = 'Reopen saved settings'; } }
+    user: { isGM: true }, users: [], items: [], actors: [], scenes: [], i18n: { localize: value => value },
+    settings: { menus: new Map(), get: () => config, register() {}, registerMenu(id, key, value) {
+      this.menus.set(`${id}.${key}`, value); if (key === 'configure') menu = value.type;
+    }, async set(id, key, value) {
+      if (key === 'rules') { config = value; document.querySelector('#open').textContent = 'Reopen saved settings'; }
+    } }
   };
   registerSettings();
   document.querySelector('#open').addEventListener('click', () => new menu().render());
@@ -81,6 +86,20 @@
     const items = ['Ring of Protection', 'Ring of Warmth', 'Ring of Spell Storing'].map(name => ({ name, type: 'equipment', system: { type: { value: 'ring' }, equipped: true } }));
     showReport({ name: 'Test character' }, equipmentViolations(items.slice(0, 2), items, rules), null, true,
       { equipment: [{ key: 'ring', label: 'Rings' }] });
+  });
+  document.querySelector('#capacity').addEventListener('click', async () => {
+    const rules = defaultConfig(); rules.equipment.ring = { enabled: true, limit: 2 };
+    rules.weapons.melee = { enabled: true, limit: 2 }; rules.heavyCountsTwo = true;
+    const sampleRing = (name, sort) => ({ id: name, name, sort, type: 'equipment', system: { type: { value: 'ring' }, equipped: true } });
+    game.users = [{ id: 'alex', name: 'Alex', isGM: false }, { id: 'morgan', name: 'Morgan (offline)', isGM: false }];
+    game.actors = [{ id: 'hero', uuid: 'Actor.hero', name: 'Garrick',
+      items: [sampleRing('Ring of Protection', 1), sampleRing('Ring of Warmth', 2), sampleRing('Ring of Spell Storing', 3),
+        { id: 'sword', name: 'Greatsword', sort: 4, type: 'weapon', system: { type: { value: 'martialM' }, equipped: true, properties: ['hvy', 'two'] } },
+        { id: 'dagger', name: 'Dagger', sort: 5, type: 'weapon', system: { type: { value: 'simpleM' }, equipped: true, properties: [] } }],
+      testUserPermission: user => user.id === 'alex'
+    }, { id: 'rogue', uuid: 'Actor.rogue', name: 'Nyx', items: [sampleRing('Ring of Evasion', 1)], testUserPermission: user => user.id === 'morgan' }];
+    config = rules;
+    await showCapacityReport();
   });
   new menu().render();
 </script>

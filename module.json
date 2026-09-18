@@ -2,7 +2,7 @@
   "id": "the-horses-equipment-limits",
   "title": "The Horse's Equipment Limits",
   "description": "GM-configurable equipment category limits, separate melee and ranged weapon limits, weighted heavy and two-handed weapons, and attunement reminders for D&D 5e.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "authors": [{ "name": "The Horse" }],
   "compatibility": { "minimum": "13" },
   "esmodules": ["scripts/main.js"],

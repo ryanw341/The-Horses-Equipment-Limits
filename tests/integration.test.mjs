@@ -191,8 +191,31 @@ test('settings are world-scoped and the menu is GM-only', () => {
   registerSettings();
   assert.equal(registered.get('rules').scope, 'world');
   assert.equal(registered.get('configure').restricted, true);
+  assert.equal(registered.get('capacityReport').restricted, true);
+  assert.equal(registered.get('initialCapacityReportShown').scope, 'world');
+  assert.equal(registered.get('initialCapacityReportShown').default, false);
+  assert.throws(() => new (registered.get('capacityReport').type)(), /Only a GM/);
   const dialog = new (registered.get('configure').type)();
   assert.ok(dialog.options.content.includes('Melee weapons'));
   assert.ok(dialog.options.content.includes('Ranged weapons'));
   assert.ok(dialog.options.content.includes('Warn only'));
+});
+
+test('saving limits shows the capacity report with the newly saved rules', async () => {
+  game.user = gm;
+  game.users = [gm, { ...player, name: 'Player' }];
+  game.actors = [{ ...actor([item('a', true), item('b', true), item('c', true)]),
+    uuid: 'Actor.hero', testUserPermission: () => true }];
+  const saved = new Map();
+  game.settings.set = async (id, key, value) => { saved.set(key, value); if (key === 'rules') config = value; };
+  globalThis.ui = { notifications: { info() {} } };
+  registerSettings();
+  const dialog = new (registered.get('configure').type)();
+  const { form } = formFixture();
+  await dialog.options.buttons[0].callback({}, { form }, dialog);
+  assert.equal(saved.get('rules').equipment.ring.limit, 2);
+  assert.equal(reports.length, 1);
+  assert.match(reports[0].content, /3 \/ 2/);
+  assert.match(reports[0].content, /Excess candidate/);
+  assert.equal(saved.get('initialCapacityReportShown'), true);
 });

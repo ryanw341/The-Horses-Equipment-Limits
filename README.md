@@ -31,12 +31,27 @@ The initiating user sees a dialog showing the category limit, current total, pro
 
 The optional attunement reminder uses the actor's prepared `system.attributes.attunement.max`, so an increased maximum such as an artificer's is respected. All attuned items count, including unequipped items. It warns when a change increases the attuned total beyond the maximum. It always permits the attunement change; equipment limits in the same operation may still block that operation. Actors without a numeric attunement maximum are skipped.
 
+## Initial player capacity report
+
+The first time this version runs with limits enabled in a world, **Player Equipment Capacity** opens for the designated active GM. A hidden world setting remembers that it has been shown, so refreshing or having several GMs connected does not repeatedly open it. Players never receive the report. Updating from 0.1.0 also shows it once.
+
+The report opens again for the GM who **saves limits**, so enabling categories on a fresh install or tightening limits immediately reveals existing excess equipment. You can reopen it at any time through **Configure Settings > The Horse's Equipment Limits > View Player Capacity**, or use **Refresh report** to check inventory changes.
+
+- The summary lists every non-GM player, including offline players, with their actor count and capacity status.
+- Assigned characters and all actors with player Owner permissions are included. Observers and GM-only actors are excluded. Shared actors appear under each owner but count only once in the overall total.
+- Linked tokens use their world actor inventory once. Unlinked tokens are listed separately with their scene and token names, including tokens on inactive scenes.
+- Over-capacity categories show the total, limit, amount over, and equipped items. Weapon slot weights and custom categories use the same rules as equip checks. Attunement is included when its reminder is enabled.
+- Items that pass the limit in **inventory sort order** are marked **Excess candidate**. The module does not know which item was equipped last. These are suggested items to review; the player can choose other items to remove. A two-slot weapon may be marked even if only one slot needs freeing.
+- Nothing is automatically unequipped or unattuned. The report also works in Warn only mode and is unaffected by GM bypass.
+
+If no category limits or attunement reminders are enabled yet, the first report explains that configuration is needed and provides a **Configure limits** button. It does not falsely report that everyone's equipment is within capacity. When limits are configured and nobody exceeds them, it explicitly says so.
+
 ## Behavior and boundaries
 
 - Normal sheet equip toggles, macros using Item document operations, and already-equipped items added to an actor are checked. The entire batch is evaluated, allowing an equip/unequip swap and preventing a bulk equip from independently claiming the same free slots.
 - In block mode, an invalid Item batch is canceled in full, including other edits in that same batch. No partial inventory edits are applied by this module.
 - Existing excess equipment is not automatically removed. Unequipping, reducing an excess, and unrelated edits remain possible. Rules are checked when a category's total increases.
-- Changing a rule does not immediately audit every actor or unequip items. Attunement reminders fire on increasing attunement, not simply opening a sheet.
+- Saving rules shows the GM an audit of player-controlled actors without unequipping anything. Individual player attunement reminders still fire on increasing attunement, not simply opening a sheet.
 - Enforcement runs on the initiating client. Separate concurrent requests can race, especially when several users share an actor. This is a gameplay helper, not a server-side permission boundary.
 - Creating/importing an entire Actor, editing raw Actor item arrays, changing token actor deltas directly, and active-effect-only changes do not go through the Item batch checks. Integrations using those paths need separate validation.
 - This version does not impose a shared armor limit across Light, Medium, and Heavy categories. Each enabled type has its own limit.
@@ -51,7 +66,7 @@ npm test
 npm run package
 ```
 
-The ZIP is written to `dist/the-horses-equipment-limits-0.1.0.zip`, with `module.json` at its root. No remote repository, manifest URL, or release URL is assumed. CI checks pushes and pull requests and uploads the ZIP as a workflow artifact.
+The ZIP is written to `dist/the-horses-equipment-limits-0.2.0.zip`, with `module.json` at its root. Source is hosted in the private [GitHub repository](https://github.com/ryanw341/The-Horses-Equipment-Limits). No public Foundry manifest or release download URL is configured. CI checks pushes and pull requests and uploads the ZIP as a workflow artifact.
 
 To preview the settings and messages without Foundry, run `python -m http.server 8765 --bind 127.0.0.1` from this folder and open `http://127.0.0.1:8765/tools/preview.html`. This uses an in-memory API mock and does not connect to a world. The preview is excluded from the module ZIP.
 
@@ -64,6 +79,8 @@ Sources checked:
 - [5e equipped and attuned fields](https://github.com/foundryvtt/dnd5e/blob/release-5.3.3/module/data/item/templates/equippable-item.mjs)
 - [Foundry Item batch operations](https://foundryvtt.com/api/classes/foundry.documents.BaseItem.html)
 - [libWrapper registration](https://github.com/ruipin/fvtt-lib-wrapper#132-using-libwrapper)
+- [Foundry active GM selection](https://foundryvtt.com/api/v13/classes/foundry.documents.collections.Users.html#activeGM)
+- [Foundry actor ownership checks](https://foundryvtt.com/api/v13/classes/foundry.documents.Actor.html#testUserPermission)
 
 ## In-world smoke test
 
@@ -76,3 +93,5 @@ Sources checked:
 7. Repeat on an unlinked player-owned token. Verify its base actor is unchanged.
 8. Use `actor.updateEmbeddedDocuments("Item", [...])` to equip two items at once and to swap items in one batch. Verify blocking and swapping respectively. Add two already-equipped items with `createEmbeddedDocuments` and verify their combined cost is checked.
 9. Save, reload the world, and verify settings persist. Confirm GM bypass and the option to apply limits to GMs.
+10. On first activation, verify only the active GM sees the capacity report. If categories are disabled, verify the configuration guidance. Save a Rings limit below a player's existing equipped count and verify the new report lists that player, actor, limit, and excess candidates. Check an offline player and an unlinked token on another scene.
+11. Reload and verify the initial report does not repeat. Open View Player Capacity, fix the inventory, then refresh the report and verify the actor is within limits. Check weighted weapons and optional attunement. Verify no inventory items were changed by running the report.
