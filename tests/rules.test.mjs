@@ -95,6 +95,19 @@ test('weighted weapons consume slots in their own weapon group', () => {
   assert.equal(equipmentViolations([], [weapon('bow', 'martialR', ['hvy'])], rules)[0].after, 2);
 });
 
+test('Accatran halves weapon slot costs without changing properties or dropping below half a slot', () => {
+  const rules = config(); rules.heavyCountsTwo = true; rules.twoHandedCountsTwo = true; rules.lightCountsHalf = true;
+  const withPattern = item => ({ ...item, flags: { 'the-horses-weapons-and-armor-expansion': { pattern: 'accatran' } } });
+  assert.equal(itemCost(withPattern(weapon('heavy', 'martialM', ['hvy'])), rules), 1);
+  assert.equal(itemCost(withPattern(weapon('two', 'martialM', ['two'])), rules), 1);
+  assert.equal(itemCost(withPattern(weapon('ordinary')), rules), 0.5);
+  assert.equal(itemCost(withPattern(weapon('light', 'simpleM', ['lgt'])), rules), 0.5);
+  assert.equal(itemCost(withPattern(equipment('armor')), rules), 1);
+  const items = [withPattern(weapon('a', 'martialM', ['hvy'])), withPattern(weapon('b', 'martialM', ['hvy']))];
+  assert.deepEqual(equipmentViolations([], items, rules), []);
+  assert.equal(equipmentViolations(items, [...items, withPattern(weapon('c'))], rules)[0].after, 2.5);
+});
+
 test('Light half-slot counting is optional, accepts property formats, and only affects weapons', () => {
   const rules = config(), dagger = weapon('dagger', 'simpleM', ['lgt']);
   assert.equal(rules.lightCountsHalf, false);

@@ -12,7 +12,12 @@ export function snapshot(item) {
     uuid: item.uuid,
     folder: typeof item.folder === 'string' ? item.folder : item.folder?.id,
     _stats: { compendiumSource: item._stats?.compendiumSource, duplicateSource: item._stats?.duplicateSource },
-    flags: { core: { sourceId: item.flags?.core?.sourceId } },
+    flags: {
+      core: { sourceId: item.flags?.core?.sourceId },
+      'the-horses-weapons-and-armor-expansion': {
+        pattern: item.flags?.['the-horses-weapons-and-armor-expansion']?.pattern
+      }
+    },
     name: item.name,
     type: item.type,
     system: {

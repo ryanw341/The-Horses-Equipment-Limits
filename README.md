@@ -33,6 +33,8 @@ The **Heavy** and **Two-Handed** options independently make matching weapons cos
 
 The separate **Light weapons count as half a slot (0.5)** option makes weapons with the Light property cost 0.5 slots. It starts disabled and applies to both melee and ranged groups. Two Light weapons use one slot. If a custom weapon also qualifies for an enabled Heavy or Two-Handed rule, it costs two slots instead. Light armor is unaffected. Player warnings and GM reports show the fractional costs, totals, and excesses.
 
+**Accatran patterns** from The Horse's Weapons and Armor Expansion halve the resulting weapon cost, with a minimum of half a slot. A two-slot weapon becomes one, a one-slot weapon becomes half, and an already-half-slot weapon stays half. This applies to capacity checks and GM reports. Removing the pattern while equipped is checked like any other capacity increase.
+
 Each equipped item entry uses its slot cost (normally one, or 0.5/two for a qualifying weapon) regardless of stack quantity. Split a stack into separate items if its copies should occupy separate equipment slots. Weapon slot weighting does not change the Ammo, Aid, or Implant carried-capacity totals.
 
 ## Ammo, aid, and implant carrying capacity

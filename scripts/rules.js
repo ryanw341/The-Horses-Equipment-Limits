@@ -47,9 +47,12 @@ export function hasProperty(item, property) {
 export function itemCost(item, config) {
   if (item.type !== 'weapon') return 1;
   // Enabled two-slot rules take precedence over Light on custom weapons with both properties.
-  if ((config.heavyCountsTwo && hasProperty(item, 'hvy'))
-    || (config.twoHandedCountsTwo && hasProperty(item, 'two'))) return 2;
-  return config.lightCountsHalf && hasProperty(item, 'lgt') ? 0.5 : 1;
+  const twoSlots = (config.heavyCountsTwo && hasProperty(item, 'hvy'))
+    || (config.twoHandedCountsTwo && hasProperty(item, 'two'));
+  const cost = twoSlots ? 2 : config.lightCountsHalf && hasProperty(item, 'lgt') ? 0.5 : 1;
+  // Accatran changes slot cost independently of the weapon's Heavy/Two-Handed properties.
+  return item.flags?.['the-horses-weapons-and-armor-expansion']?.pattern === 'accatran'
+    ? Math.max(0.5, cost * 0.5) : cost;
 }
 
 export function categoryKey(item, config, systemMap = {}) {

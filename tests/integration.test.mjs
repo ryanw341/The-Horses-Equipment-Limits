@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { defaultConfig } from '../scripts/rules.js';
-import { checkOperation, registerEnforcement } from '../scripts/enforcement.js';
+import { snapshot, checkOperation, registerEnforcement } from '../scripts/enforcement.js';
 import { getConfig, readForm, registerSettings } from '../scripts/settings.js';
 import { categoryId } from '../scripts/carry.js';
 
@@ -288,4 +288,26 @@ test('Light weapon equip batches and property changes enforce fractional totals'
   config.mode = 'warn';
   assert.equal(checkOperation([], operation, player, false), undefined);
   assert.ok(weapons[0].system.properties.has('lgt'), 'Checks do not modify the source item');
+});
+
+test('Accatran pattern flags survive equipped-item snapshots, creation, and projected pattern removal', () => {
+  const expansion = 'the-horses-weapons-and-armor-expansion';
+  config.heavyCountsTwo = true;
+  config.weapons.melee = { enabled: true, limit: 2 };
+  const weapon = (id, equipped = true) => ({ id, name: id, type: 'weapon',
+    flags: { [expansion]: { pattern: 'accatran', other: 'not-needed' } },
+    system: { equipped, type: { value: 'martialM' }, properties: new Set(['hvy']) } });
+  const first = weapon('first'), second = weapon('second', false);
+  const prepared = snapshot(first);
+  assert.equal(prepared.flags[expansion].pattern, 'accatran');
+  prepared.flags[expansion].pattern = 'imperial';
+  assert.equal(first.flags[expansion].pattern, 'accatran', 'The snapshot must not mutate source flags');
+  const parent = actor([first, second]);
+  assert.equal(checkOperation([], { parent, updates: [{ _id: 'second', 'system.equipped': true }] }, player, false), undefined);
+  assert.equal(reports.length, 0, 'Two Accatran heavy weapons fit in two slots');
+  assert.equal(checkOperation([weapon('third')], { parent: actor([first]) }, player, true), undefined);
+  second.system.equipped = true;
+  assert.equal(checkOperation([], { parent, updates: [{ _id: 'second', [`flags.${expansion}.pattern`]: 'imperial' }] }, player, false), false);
+  assert.match(reports[0].content, /blocked/);
+  assert.equal(second.flags[expansion].pattern, 'accatran', 'Blocked projected updates leave the actual pattern intact');
 });

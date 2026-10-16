@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.2
+
+- Recognize Accatran patterns from The Horse's Weapons and Armor Expansion: two-slot weapons cost one, one-slot weapons cost half, and already-half-slot weapons remain half.
+- Preserve pattern flags during batch enforcement so equips, imports, and pattern changes use the correct cost.
+- Block pattern removal when it would newly exceed equipment capacity in block mode.
+
 ## 0.3.1
 
 - Add a separate, disabled-by-default Light weapon option: matching weapons use half a slot in their melee or ranged group.
